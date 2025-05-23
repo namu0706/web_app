@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>数字当てゲーム＋クイズ強化版</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #222;
+      color: #fff;
+      text-align: center;
+      padding: 50px;
+    }
+    input[type="number"] {
+      font-size: 1.2em;
+      padding: 5px;
+      width: 100px;
+    }
+    button {
+      font-size: 1.1em;
+      padding: 8px 16px;
+      margin: 5px;
+      cursor: pointer;
+    }
+    #message {
+      margin-top: 20px;
+      font-size: 1.3em;
+    }
+    #resetBtn {
+      margin-top: 20px;
+      display: none;
+    }
+    #quizBox {
+      margin-top: 30px;
+      background-color: #333;
+      padding: 20px;
+      border-radius: 8px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>数字当てゲーム</h1>
+  <p>1〜100の数字を当ててみよう！（5回まで）</p>
+  <p>誤差10以内＝もう少し..　誤差11～30＝まだ..　誤差31以上＝もっと..</p>
+  <p>クイズ不正解の場合 もっと.. のみ</p>
+  <input type="number" id="guess" min="1" max="100">
+  <button onclick="startQuiz()">判定！</button>
+
+  <div id="message"></div>
+  <button id="resetBtn" onclick="resetGame()">もう1回プレイ</button>
+
+  <div id="quizBox">
+    <p><strong>🎓 クイズに正解すると詳細ヒントが出るよ！</strong></p>
+    <p id="quizQuestion"></p>
+    <div id="quizChoices"></div>
+    <p id="quizFeedback"></p>
+  </div>
+
+  <script>
+    const quizList = [
+      { q: "月とすっぽん、共通点は？", a: "丸い" , choices: ["食べ物", "丸い", "水に関係"] },
+      { q: "朝は4本、昼は2本、夜は3本。これは何？", a: "人間", choices: ["ロボット", "タコ", "人間"] },
+      { q: "あるのに見えず、触れず、嗅げず、味もない。でも空気中にある。何？", a: "音", choices: ["音", "気配", "風"] },
+      { q: "1→10、2→20、3→30、5→？", a: "50", choices: ["25", "45", "50"] },
+      { q: "逆立ちしても読める漢字は？", a: "日", choices: ["木", "日", "川"] },
+      { q: "空にいる何でも知ってるけど姿は見えないのはどれ？", a: "インターネット", choices: ["ゼウス", "風", "インターネット"] },
+      { q: "春、夏、秋、冬　いつ始めた趣味が続かない？", a: "秋", choices: ["春", "夏", "秋","冬"] },
+      { q: "「木」を3つ集めると何になる？", a: "森", choices: ["林", "森", "山"] },
+      { q: "英語で「ねこ」はcat。では「ねこぜ」は？", a: "catback", choices: ["nekose", "catback", "nekoze"] },
+      { q: "3人で3日かかる仕事。6人で何日かかる？", a: "1.5", choices: ["1.5", "2", "3"] },
+      { q: "太陽が西から昇る国は？", a: "存在しない", choices: ["日本", "ブラジル", "存在しない"] },
+      { q: "一番固いパンは？", a: "フライパン", choices: ["フライパン", "フランスパン", "菓子パン"] },
+      { q: "どんな戦いでもいつもいきのこりの中にいるのはだれ？", a: "エリンギ", choices: ["エリンギ", "シモヘイヘ", "マイクタイソン"] },
+      { q: "信号で止まる色は？", a: "赤", choices: ["緑", "赤", "黄色"] },
+      { q: "1週間に日曜日は何回ある？", a: "1", choices: ["2", "1", "7"] },
+      { q: "人が生きていくのに欠かせないものは？", a: "酸素", choices: ["酸素", "お金", "愛"] },
+      { q: "走っているのに止まってるものは？", a: "時計", choices: ["時計", "車", "電車"] },
+      { q: "どれだけ使っても減らないものは？", a: "アイデア", choices: ["お金", "アイデア", "鉛筆"] },
+      { q: "食べるとなんでも覚えられるパンは？", a: "暗記パン", choices: ["アンパンマン", "暗記パン", "フランスパン"] },
+      { q: "答えが答えの中にある問題は？", a: "この問題", choices: ["この問題", "前の問題", "存在しない"] },
+      { q: "四角いけど丸いものってなに？", a: "時計", choices: ["箱", "時計", "CD"] },
+      { q: "鳥の家にある調味料は？", a: "酢", choices: ["塩", "味噌", "酢"] },
+      { q: "1日が25時間ある国は？", a: "ない", choices: ["中国", "アメリカ", "ない"] },
+      { q: "いつも上を向いている動物は？", a: "カバ", choices: ["キリン", "カバ", "フクロウ"] },
+      { q: "魚なのに空を飛ぶのは？", a: "トビウオ", choices: ["サメ", "トビウオ", "イルカ"] },
+      { q: "庭にひっくり返っている動物はだれ？", a: "ワニ", choices: ["カンガルー", "ワニ", "タカ"] },
+      { q: "氷を溶かすと何になる？", a: "水", choices: ["水", "空気", "ゼロ"] },
+      { q: "かけても減らないものは？", a: "愛情", choices: ["愛情", "お金", "髪"] },
+      { q: "お寺の横に人がたってる！誰？", a: "侍", choices: ["鍛冶師", "忍者", "侍"] },
+      { q: "スイッチを１０００回入れると現れる場所は？", a: "温泉", choices: ["秘境", "温泉", "サウナ"] },
+    ];
+
+    let answer = Math.floor(Math.random() * 100) + 1;
+    let attempts = 0;
+    const maxAttempts = 5;
+    let currentGuess = null;
+    let currentAnswer = null;
+    let hintMode = 'normal';
+
+   function startQuiz() {
+  const input = Number(document.getElementById("guess").value);
+  if (!input || input < 1 || input > 100) {
+    document.getElementById("message").textContent = "1〜100の数字を入力してね！";
+    return;
+  }
+
+  currentGuess = input;
+  hintMode = 'normal';
+
+  // 🎯 正解チェックは最優先（クイズ不要）
+  if (currentGuess === answer) {
+    attempts++;
+    document.getElementById("message").innerHTML = `🎉 正解！${attempts}回目で当たったよ！`;
+    document.getElementById("resetBtn").style.display = "inline-block";
+    return;
+  }
+
+  // 🎯 最後の5回目のときはクイズをスキップして判定直行
+  if (attempts === maxAttempts - 1) {
+    checkGuess();  // これが5回目のチェック
+    return;
+  }
+
+  // ✅ クイズ表示（1〜4回目）
+  showRandomQuiz();
+}
+
+
+    function showRandomQuiz() {
+      const quiz = quizList[Math.floor(Math.random() * quizList.length)];
+      currentAnswer = quiz.a;
+      document.getElementById("quizBox").style.display = "block";
+      document.getElementById("quizQuestion").textContent = quiz.q;
+      const choicesHTML = quiz.choices.map(c => `<button onclick="answerQuiz('${c}')">${c}</button>`).join("");
+      document.getElementById("quizChoices").innerHTML = choicesHTML;
+      document.getElementById("quizFeedback").textContent = "";
+    }
+
+    function answerQuiz(choice) {
+      const feedback = document.getElementById("quizFeedback");
+      hintMode = (choice === currentAnswer) ? 'detailed' : 'normal';
+      feedback.textContent = (hintMode === 'detailed') ? "🎉 正解！詳細ヒントが出るよ！" : "❌ 不正解！通常ヒントで判定するよ";
+      setTimeout(() => {
+        document.getElementById("quizBox").style.display = "none";
+        checkGuess();
+      }, 1000);
+    }
+
+    function checkGuess() {
+      const guess = currentGuess;
+      const message = document.getElementById("message");
+      attempts++;
+
+      if (attempts >= maxAttempts) {
+        message.innerHTML = `😵 ゲームオーバー！正解は ${answer} でした。`;
+        document.getElementById("resetBtn").style.display = "inline-block";
+        return;
+      }
+
+      const diff = Math.abs(guess - answer);
+      const direction = guess < answer ? "大きい" : "小さい";
+
+      if (hintMode === 'detailed') {
+        if (diff <= 10) {
+          message.textContent = `もう少し${direction}よ！（残り${maxAttempts - attempts}回）`;
+        } else if (diff <= 30) {
+          message.textContent = `まだ${direction}よ！（残り${maxAttempts - attempts}回）`;
+        } else {
+          message.textContent = `もっと${direction}よ！（残り${maxAttempts - attempts}回）`;
+        }
+      } else {
+        message.textContent = `もっと${direction}よ！（残り${maxAttempts - attempts}回）`;
+      }
+    }
+
+    function resetGame() {
+      answer = Math.floor(Math.random() * 100) + 1;
+      attempts = 0;
+      currentGuess = null;
+      hintMode = 'normal';
+      document.getElementById("message").textContent = "";
+      document.getElementById("guess").value = "";
+      document.getElementById("resetBtn").style.display = "none";
+      document.getElementById("quizBox").style.display = "none";
+      document.getElementById("quizFeedback").textContent = "";
+    }
+  </script>
+
+</body>
+</html>
